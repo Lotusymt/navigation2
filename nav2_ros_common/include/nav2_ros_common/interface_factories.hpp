@@ -26,6 +26,7 @@
 #include "nav2_ros_common/publisher.hpp"
 #include "nav2_ros_common/subscription.hpp"
 #include "nav2_ros_common/action_client.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "rclcpp_action/client.hpp"
 
 namespace nav2
@@ -307,6 +308,48 @@ typename nav2::SimpleActionServer<ActionT>::SharedPtr create_action_server(
 {
   return std::make_shared<nav2::SimpleActionServer<ActionT>>(
     node, action_name, execute_callback, complete_cb, server_timeout, spin_thread, realtime);
+}
+
+/**
+ * @brief Create a lifecycle-managed ActionServer to host with an action
+ * @param node Node to create the action server on
+ * @param action_name Name of action
+ * @param handle_goal Callback to handle goal requests
+ * @param handle_cancel Callback to handle cancel requests
+ * @param handle_accepted Callback to handle accepted goals
+ * @param options Action server options (default options if not provided)
+ * @param callback_group Callback group to use (optional)
+ * @return A shared pointer to the created nav2::ActionServer
+ *
+ * If the node is not a lifecycle node, the action server will be auto-activated.
+ * For lifecycle nodes, the action server must be activated via lifecycle transitions.
+ */
+template<typename ActionT, typename NodeT>
+typename nav2::ActionServer<ActionT>::SharedPtr create_action_server(
+  const NodeT & node,
+  const std::string & action_name,
+  typename nav2::ActionServer<ActionT>::GoalCallback handle_goal,
+  typename nav2::ActionServer<ActionT>::CancelCallback handle_cancel,
+  typename nav2::ActionServer<ActionT>::AcceptedCallback handle_accepted,
+  const rcl_action_server_options_t & options = rcl_action_server_get_default_options(),
+  rclcpp::CallbackGroup::SharedPtr callback_group = nullptr)
+{
+  auto server = std::make_shared<nav2::ActionServer<ActionT>>(
+    node, action_name, handle_goal, handle_cancel, handle_accepted, options, callback_group);
+
+  // If lifecycle node, add to managed entities
+  auto lc_node = std::dynamic_pointer_cast<rclcpp_lifecycle::LifecycleNode>(node);
+  if (lc_node) {
+    lc_node->add_managed_entity(server);
+    // Auto-activate if node is already active
+    if (lc_node->get_current_state().id() ==
+      lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
+    {
+      server->on_activate();
+    }
+  }
+
+  return server;
 }
 
 /**

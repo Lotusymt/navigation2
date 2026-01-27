@@ -225,6 +225,41 @@ public:
   }
 
   /**
+   * @brief Create a lifecycle-managed ActionServer to host with an action
+   * @param action_name Name of action
+   * @param handle_goal Callback to handle goal requests
+   * @param handle_cancel Callback to handle cancel requests
+   * @param handle_accepted Callback to handle accepted goals
+   * @param options Action server options (default options if not provided)
+   * @param callback_group Callback group to use (optional)
+   * @return A shared pointer to the created nav2::ActionServer
+   */
+  template<typename ActionT>
+  typename nav2::ActionServer<ActionT>::SharedPtr
+  create_action_server(
+    const std::string & action_name,
+    typename nav2::ActionServer<ActionT>::GoalCallback handle_goal,
+    typename nav2::ActionServer<ActionT>::CancelCallback handle_cancel,
+    typename nav2::ActionServer<ActionT>::AcceptedCallback handle_accepted,
+    const rcl_action_server_options_t & options = rcl_action_server_get_default_options(),
+    rclcpp::CallbackGroup::SharedPtr callback_group = nullptr)
+  {
+    auto server = nav2::interfaces::create_action_server<ActionT>(
+      shared_from_this(), action_name, handle_goal, handle_cancel, handle_accepted,
+      options, callback_group);
+    this->add_managed_entity(server);
+
+    // Automatically activate the action server if the node is already active
+    if (get_current_state().id() ==
+      lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
+    {
+      server->on_activate();
+    }
+
+    return server;
+  }
+
+  /**
    * @brief Create a SimpleActionServer to host with an action
    * @param action_name Name of action
    * @param execute_callback Callback function to handle action execution
