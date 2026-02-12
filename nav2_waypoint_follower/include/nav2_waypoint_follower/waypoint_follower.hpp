@@ -29,7 +29,7 @@
 #include "nav2_msgs/action/follow_waypoints.hpp"
 #include "nav2_msgs/msg/waypoint_status.hpp"
 #include "nav_msgs/msg/path.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_ros_common/node_utils.hpp"
 #include "nav2_util/string_utils.hpp"
 #include "nav2_msgs/action/follow_gps_waypoints.hpp"
@@ -69,12 +69,12 @@ class WaypointFollower : public nav2::LifecycleNode
 public:
   using ActionT = nav2_msgs::action::FollowWaypoints;
   using ClientT = nav2_msgs::action::NavigateToPose;
-  using ActionServer = nav2::SimpleActionServer<ActionT>;
+  using ActionServer = nav2::ActionServer<ActionT>;
   using ActionClient = nav2::ActionClient<ClientT>;
 
   // Shorten the types for GPS waypoint following
   using ActionTGPS = nav2_msgs::action::FollowGPSWaypoints;
-  using ActionServerGPS = nav2::SimpleActionServer<ActionTGPS>;
+  using ActionServerGPS = nav2::ActionServer<ActionTGPS>;
 
   /**
    * @brief A constructor for nav2_waypoint_follower::WaypointFollower class

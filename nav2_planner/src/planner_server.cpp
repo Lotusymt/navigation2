@@ -156,14 +156,14 @@ PlannerServer::on_configure(const rclcpp_lifecycle::State & state)
     shared_from_this(), costmap_ros_, costmap_update_timeout_);
 
   // Create the action servers for path planning to a pose and through poses
-  action_server_pose_ = create_action_server<ActionToPose>(
+  action_server_pose_ = create_managed_action_server<ActionToPose>(
     "compute_path_to_pose",
     std::bind(&PlannerServer::computePlan, this),
     nullptr,
     std::chrono::milliseconds(500),
     true);
 
-  action_server_poses_ = create_action_server<ActionThroughPoses>(
+  action_server_poses_ = create_managed_action_server<ActionThroughPoses>(
     "compute_path_through_poses",
     std::bind(&PlannerServer::computePlanThroughPoses, this),
     nullptr,
@@ -179,8 +179,6 @@ PlannerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   RCLCPP_INFO(get_logger(), "Activating");
 
   plan_publisher_->on_activate();
-  action_server_pose_->activate();
-  action_server_poses_->activate();
   const auto costmap_ros_state = costmap_ros_->activate();
   if (costmap_ros_state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
     return nav2::CallbackReturn::FAILURE;
@@ -208,8 +206,6 @@ PlannerServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
 
-  action_server_pose_->deactivate();
-  action_server_poses_->deactivate();
   plan_publisher_->on_deactivate();
 
   /*
@@ -269,7 +265,7 @@ PlannerServer::on_shutdown(const rclcpp_lifecycle::State &)
 
 template<typename T>
 bool PlannerServer::isServerInactive(
-  typename nav2::SimpleActionServer<T>::SharedPtr & action_server)
+  typename nav2::ActionServer<T>::SharedPtr & action_server)
 {
   if (action_server == nullptr || !action_server->is_server_active()) {
     RCLCPP_DEBUG(get_logger(), "Action server unavailable or inactive. Stopping.");
@@ -292,7 +288,7 @@ void PlannerServer::waitForCostmap()
 
 template<typename T>
 bool PlannerServer::isCancelRequested(
-  typename nav2::SimpleActionServer<T>::SharedPtr & action_server)
+  typename nav2::ActionServer<T>::SharedPtr & action_server)
 {
   if (action_server->is_cancel_requested()) {
     RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
@@ -305,7 +301,7 @@ bool PlannerServer::isCancelRequested(
 
 template<typename T>
 void PlannerServer::getPreemptedGoalIfRequested(
-  typename nav2::SimpleActionServer<T>::SharedPtr & action_server,
+  typename nav2::ActionServer<T>::SharedPtr & action_server,
   typename std::shared_ptr<const typename T::Goal> goal)
 {
   if (action_server->is_preempt_requested()) {

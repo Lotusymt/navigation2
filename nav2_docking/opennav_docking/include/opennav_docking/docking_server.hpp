@@ -25,7 +25,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "nav2_ros_common/lifecycle_node.hpp"
 #include "nav2_ros_common/node_utils.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_util/twist_publisher.hpp"
 #include "nav2_util/odometry_utils.hpp"
 #include "opennav_docking/controller.hpp"
@@ -45,8 +45,8 @@ namespace opennav_docking
 class DockingServer : public nav2::LifecycleNode
 {
 public:
-  using DockingActionServer = nav2::SimpleActionServer<DockRobot>;
-  using UndockingActionServer = nav2::SimpleActionServer<UndockRobot>;
+  using DockingActionServer = nav2::ActionServer<DockRobot>;
+  using UndockingActionServer = nav2::ActionServer<UndockRobot>;
 
   /**
    * @brief A constructor for opennav_docking::DockingServer
@@ -146,7 +146,7 @@ public:
   template<typename ActionT>
   void getPreemptedGoalIfRequested(
     typename std::shared_ptr<const typename ActionT::Goal> goal,
-    const typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server);
+    const typename nav2::ActionServer<ActionT>::SharedPtr & action_server);
 
   /**
    * @brief Checks and logs warning if action canceled
@@ -156,7 +156,7 @@ public:
    */
   template<typename ActionT>
   bool checkAndWarnIfCancelled(
-    typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+    typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
     const std::string & name);
 
   /**
@@ -167,7 +167,7 @@ public:
    */
   template<typename ActionT>
   bool checkAndWarnIfPreempted(
-    typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+    typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
     const std::string & name);
 
   /**

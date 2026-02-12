@@ -28,7 +28,7 @@
 #include "nav2_msgs/action/follow_object.hpp"
 #include "nav2_ros_common/lifecycle_node.hpp"
 #include "nav2_ros_common/node_utils.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_util/twist_publisher.hpp"
 #include "nav2_util/odometry_utils.hpp"
 #include "opennav_docking/controller.hpp"
@@ -46,7 +46,7 @@ class FollowingServer : public nav2::LifecycleNode
 {
 public:
   using FollowObject = nav2_msgs::action::FollowObject;
-  using FollowingActionServer = nav2::SimpleActionServer<FollowObject>;
+  using FollowingActionServer = nav2::ActionServer<FollowObject>;
 
   /**
    * @brief A constructor for opennav_following::FollowingServer
@@ -95,7 +95,7 @@ public:
   template<typename ActionT>
   void getPreemptedGoalIfRequested(
     typename std::shared_ptr<const typename ActionT::Goal> goal,
-    const typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server);
+    const typename nav2::ActionServer<ActionT>::SharedPtr & action_server);
 
   /**
    * @brief Checks and logs warning if action canceled
@@ -105,7 +105,7 @@ public:
    */
   template<typename ActionT>
   bool checkAndWarnIfCancelled(
-    typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+    typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
     const std::string & name);
 
   /**
@@ -116,7 +116,7 @@ public:
    */
   template<typename ActionT>
   bool checkAndWarnIfPreempted(
-    typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+    typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
     const std::string & name);
 
   /**

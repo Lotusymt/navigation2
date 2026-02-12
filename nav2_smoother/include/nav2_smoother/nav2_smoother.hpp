@@ -30,7 +30,7 @@
 #include "nav2_msgs/action/smooth_path.hpp"
 #include "nav2_ros_common/lifecycle_node.hpp"
 #include "nav2_util/robot_utils.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "pluginlib/class_list_macros.hpp"
 #include "pluginlib/class_loader.hpp"
 
@@ -115,7 +115,7 @@ protected:
 
   using Action = nav2_msgs::action::SmoothPath;
   using ActionResult = Action::Result;
-  using ActionServer = nav2::SimpleActionServer<Action>;
+  using ActionServer = nav2::ActionServer<Action>;
 
   /**
    * @brief SmoothPath action server callback. Handles action server updates and

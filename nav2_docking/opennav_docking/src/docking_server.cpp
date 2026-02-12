@@ -90,13 +90,13 @@ DockingServer::on_configure(const rclcpp_lifecycle::State & state)
   odom_sub_ = std::make_unique<nav2_util::OdomSmoother>(node, odom_duration, odom_topic);
 
   // Create the action servers for dock / undock
-  docking_action_server_ = node->create_action_server<DockRobot>(
+  docking_action_server_ = node->create_managed_action_server<DockRobot>(
     "dock_robot",
     std::bind(&DockingServer::dockRobot, this),
     nullptr, std::chrono::milliseconds(500),
     true);
 
-  undocking_action_server_ = node->create_action_server<UndockRobot>(
+  undocking_action_server_ = node->create_managed_action_server<UndockRobot>(
     "undock_robot",
     std::bind(&DockingServer::undockRobot, this),
     nullptr, std::chrono::milliseconds(500),
@@ -126,8 +126,6 @@ DockingServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   dock_db_->activate();
   navigator_->activate();
   vel_publisher_->on_activate();
-  docking_action_server_->activate();
-  undocking_action_server_->activate();
   curr_dock_type_.clear();
 
   // Add callback for dynamic parameters
@@ -145,8 +143,6 @@ DockingServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating %s", get_name());
 
-  docking_action_server_->deactivate();
-  undocking_action_server_->deactivate();
   dock_db_->deactivate();
   navigator_->deactivate();
   vel_publisher_->on_deactivate();
@@ -188,7 +184,7 @@ DockingServer::on_shutdown(const rclcpp_lifecycle::State &)
 template<typename ActionT>
 void DockingServer::getPreemptedGoalIfRequested(
   typename std::shared_ptr<const typename ActionT::Goal> goal,
-  const typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server)
+  const typename nav2::ActionServer<ActionT>::SharedPtr & action_server)
 {
   if (action_server->is_preempt_requested()) {
     goal = action_server->accept_pending_goal();
@@ -197,7 +193,7 @@ void DockingServer::getPreemptedGoalIfRequested(
 
 template<typename ActionT>
 bool DockingServer::checkAndWarnIfCancelled(
-  typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+  typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
   const std::string & name)
 {
   if (action_server->is_cancel_requested()) {
@@ -209,7 +205,7 @@ bool DockingServer::checkAndWarnIfCancelled(
 
 template<typename ActionT>
 bool DockingServer::checkAndWarnIfPreempted(
-  typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+  typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
   const std::string & name)
 {
   if (action_server->is_preempt_requested()) {

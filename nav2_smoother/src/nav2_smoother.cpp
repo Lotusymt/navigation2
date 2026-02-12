@@ -104,7 +104,7 @@ SmootherServer::on_configure(const rclcpp_lifecycle::State & state)
   plan_publisher_ = create_publisher<nav_msgs::msg::Path>("plan_smoothed");
 
   // Create the action server that we implement with our smoothPath method
-  action_server_ = create_action_server<Action>(
+  action_server_ = create_managed_action_server<Action>(
     "smooth_path",
     std::bind(&SmootherServer::smoothPlan, this),
     nullptr,
@@ -162,7 +162,6 @@ SmootherServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   for (it = smoothers_.begin(); it != smoothers_.end(); ++it) {
     it->second->activate();
   }
-  action_server_->activate();
 
   // create bond connection
   createBond();
@@ -175,7 +174,6 @@ SmootherServer::on_deactivate(const rclcpp_lifecycle::State &)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
 
-  action_server_->deactivate();
   SmootherMap::iterator it;
   for (it = smoothers_.begin(); it != smoothers_.end(); ++it) {
     it->second->deactivate();

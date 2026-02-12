@@ -44,12 +44,12 @@ RouteServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
 
   route_publisher_ = create_publisher<nav2_msgs::msg::Route>("route");
 
-  compute_route_server_ = create_action_server<ComputeRoute>(
+  compute_route_server_ = create_managed_action_server<ComputeRoute>(
     "compute_route",
     std::bind(&RouteServer::computeRoute, this),
     nullptr, std::chrono::milliseconds(500), true);
 
-  compute_and_track_route_server_ = create_action_server<ComputeAndTrackRoute>(
+  compute_and_track_route_server_ = create_managed_action_server<ComputeAndTrackRoute>(
     "compute_and_track_route",
     std::bind(&RouteServer::computeAndTrackRoute, this),
     nullptr, std::chrono::milliseconds(500), true);
@@ -109,8 +109,6 @@ nav2::CallbackReturn
 RouteServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
-  compute_route_server_->activate();
-  compute_and_track_route_server_->activate();
   graph_vis_publisher_->on_activate();
   graph_vis_publisher_->publish(utils::toMsg(graph_, route_frame_, this->now()));
   route_publisher_->on_activate();
@@ -122,8 +120,6 @@ nav2::CallbackReturn
 RouteServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
-  compute_route_server_->deactivate();
-  compute_and_track_route_server_->deactivate();
   graph_vis_publisher_->on_deactivate();
   route_publisher_->on_deactivate();
   destroyBond();
@@ -174,7 +170,7 @@ RouteServer::findPlanningDuration(const rclcpp::Time & start_time)
 template<typename ActionT>
 bool
 RouteServer::isRequestValid(
-  typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server)
+  typename nav2::ActionServer<ActionT>::SharedPtr & action_server)
 {
   if (!action_server || !action_server->is_server_active()) {
     RCLCPP_DEBUG(get_logger(), "Action server unavailable or inactive. Stopping.");
@@ -255,7 +251,7 @@ Route RouteServer::findRoute(
 template<typename ActionT>
 void
 RouteServer::processRouteRequest(
-  typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server)
+  typename nav2::ActionServer<ActionT>::SharedPtr & action_server)
 {
   auto goal = action_server->get_current_goal();
   auto result = std::make_shared<typename ActionT::Result>();

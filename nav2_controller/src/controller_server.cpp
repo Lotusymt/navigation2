@@ -199,7 +199,7 @@ ControllerServer::on_configure(const rclcpp_lifecycle::State & state)
   // Create the action server that we implement with our followPath method
   // This may throw due to real-time prioritization if user doesn't have real-time permissions
   try {
-    action_server_ = create_action_server<Action>(
+    action_server_ = create_managed_action_server<Action>(
       "follow_path",
       std::bind(&ControllerServer::computeControl, this),
       nullptr,
@@ -235,7 +235,6 @@ ControllerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   vel_publisher_->on_activate();
   transformed_plan_pub_->on_activate();
   tracking_feedback_pub_->on_activate();
-  action_server_->activate();
   param_handler_->activate();
   auto node = shared_from_this();
 
@@ -250,7 +249,6 @@ ControllerServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
 
-  action_server_->deactivate();
   ControllerMap::iterator it;
   for (it = controllers_.begin(); it != controllers_.end(); ++it) {
     it->second->deactivate();

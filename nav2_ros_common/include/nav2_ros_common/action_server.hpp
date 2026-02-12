@@ -16,16 +16,14 @@
 #ifndef NAV2_ROS_COMMON__ACTION_SERVER_HPP_
 #define NAV2_ROS_COMMON__ACTION_SERVER_HPP_
 
+#include <chrono>
 #include <memory>
 #include <string>
-#include <functional>
-#include <utility>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rclcpp_lifecycle/managed_entity.hpp"
-#include "lifecycle_msgs/msg/state.hpp"
+#include "nav2_ros_common/simple_action_server.hpp"
 
 namespace nav2
 {
@@ -33,11 +31,14 @@ namespace nav2
 /**
  * @brief A lifecycle-managed action server wrapper for Nav2
  *
- * This wrapper provides lifecycle management for action servers, similar to
- * nav2::Publisher and nav2::Subscription. It gates goal acceptance and execution
- * based on activation state. When deactivated, new goals are rejected and a
- * throttled warning is logged. For non-lifecycle nodes, the server is
- * automatically activated.
+ * Wraps nav2::SimpleActionServer and extends SimpleManagedEntity so it can be
+ * added to a LifecycleNode's managed entities. Activation and deactivation are
+ * driven by lifecycle transitions; call sites no longer need to manually call
+ * activate()/deactivate() in on_activate/on_deactivate.
+ *
+ * Exposes the full SimpleActionServer API via forwarding, so existing call
+ * sites can use ActionServer as a drop-in replacement without code changes
+ * (other than removing manual activate/deactivate calls).
  */
 template<typename ActionT>
 class ActionServer : public rclcpp_lifecycle::SimpleManagedEntity
@@ -45,153 +46,125 @@ class ActionServer : public rclcpp_lifecycle::SimpleManagedEntity
 public:
   RCLCPP_SMART_PTR_DEFINITIONS(ActionServer)
 
-  using RclcppServer = rclcpp_action::Server<ActionT>;
+  using SimpleServer = nav2::SimpleActionServer<ActionT>;
 
-  // Callback types
-  using GoalCallback = std::function<rclcpp_action::GoalResponse(
-      const rclcpp_action::GoalUUID &,
-      std::shared_ptr<const typename ActionT::Goal>)>;
-  using CancelCallback = std::function<rclcpp_action::CancelResponse(
-      const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>>)>;
-  using AcceptedCallback = std::function<void(
-      const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>>)>;
-
-  /**
-   * @brief Constructor for ActionServer
-   * @param node Node to create the action server on
-   * @param action_name Name of the action
-   * @param handle_goal Callback to handle goal requests
-   * @param handle_cancel Callback to handle cancel requests
-   * @param handle_accepted Callback to handle accepted goals
-   * @param options Action server options (default options if not provided)
-   * @param callback_group Callback group to use (optional)
-   */
   template<typename NodeT>
   ActionServer(
-    const std::shared_ptr<NodeT> & node,
+    NodeT node,
     const std::string & action_name,
-    GoalCallback handle_goal,
-    CancelCallback handle_cancel,
-    AcceptedCallback handle_accepted,
-    const rcl_action_server_options_t & options = rcl_action_server_get_default_options(),
-    rclcpp::CallbackGroup::SharedPtr callback_group = nullptr)
-  : action_name_(action_name),
-    logger_(node->get_logger()),
-    clock_(node->get_clock())
-  {
-    init(node, handle_goal, handle_cancel, handle_accepted, options, callback_group);
-  }
+    typename SimpleServer::ExecuteCallback execute_cb,
+    typename SimpleServer::CompletionCallback completion_cb = nullptr,
+    std::chrono::milliseconds server_timeout = std::chrono::milliseconds(500),
+    bool spin_thread = false,
+    const bool realtime = false)
+  : simple_(std::make_shared<SimpleServer>(
+        node, action_name, execute_cb, completion_cb, server_timeout, spin_thread, realtime))
+  {}
 
   void on_activate() override
   {
     rclcpp_lifecycle::SimpleManagedEntity::on_activate();
+    simple_->activate();
   }
 
   void on_deactivate() override
   {
+    simple_->deactivate();
     rclcpp_lifecycle::SimpleManagedEntity::on_deactivate();
   }
 
-  const char * get_action_name() const noexcept
+  // --- Forward SimpleActionServer API (drop-in replacement for call sites) ---
+
+  const std::shared_ptr<const typename ActionT::Goal> get_current_goal() const
   {
-    return action_name_.c_str();
+    return simple_->get_current_goal();
   }
 
-protected:
-  template<typename NodeT>
-  void init(
-    const std::shared_ptr<NodeT> & node,
-    GoalCallback handle_goal,
-    CancelCallback handle_cancel,
-    AcceptedCallback handle_accepted,
-    const rcl_action_server_options_t & options,
-    rclcpp::CallbackGroup::SharedPtr callback_group)
+  const rclcpp_action::GoalUUID get_current_goal_id() const
   {
-    // Store user callbacks
-    user_handle_goal_ = handle_goal;
-    user_handle_cancel_ = handle_cancel;
-    user_handle_accepted_ = handle_accepted;
-
-    // Create wrapped callbacks that gate based on activation state
-    auto wrapped_handle_goal =
-      [this](const rclcpp_action::GoalUUID & uuid,
-             std::shared_ptr<const typename ActionT::Goal> goal)
-      {
-        if (!this->is_activated()) {
-          RCLCPP_WARN_THROTTLE(
-            logger_,
-            *clock_,
-            1000,  // milliseconds -> 1Hz
-            "ActionServer '%s' received goal before activation; rejecting until activated.",
-            action_name_.c_str());
-          return rclcpp_action::GoalResponse::REJECT;
-        }
-
-        // Call user callback if provided
-        if (user_handle_goal_) {
-          return user_handle_goal_(uuid, goal);
-        }
-        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-      };
-
-    auto wrapped_handle_cancel =
-      [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> goal_handle)
-      {
-        if (!this->is_activated()) {
-          // Reject cancel if not activated (simplest behavior)
-          return rclcpp_action::CancelResponse::REJECT;
-        }
-
-        // Call user callback if provided
-        if (user_handle_cancel_) {
-          return user_handle_cancel_(goal_handle);
-        }
-        return rclcpp_action::CancelResponse::ACCEPT;
-      };
-
-    auto wrapped_handle_accepted =
-      [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionT>> goal_handle)
-      {
-        if (!this->is_activated()) {
-          // Don't execute if not activated
-          return;
-        }
-
-        // Call user callback if provided
-        if (user_handle_accepted_) {
-          user_handle_accepted_(goal_handle);
-        }
-      };
-
-    // Create the underlying action server
-    server_ = rclcpp_action::create_server<ActionT>(
-      node->get_node_base_interface(),
-      node->get_node_clock_interface(),
-      node->get_node_logging_interface(),
-      node->get_node_waitables_interface(),
-      action_name_,
-      std::move(wrapped_handle_goal),
-      std::move(wrapped_handle_cancel),
-      std::move(wrapped_handle_accepted),
-      options,
-      callback_group);
-
-    // Auto-activate for non-lifecycle nodes
-    auto lc_node = std::dynamic_pointer_cast<rclcpp_lifecycle::LifecycleNode>(node);
-    if (!lc_node) {
-      on_activate();
-    }
+    return simple_->get_current_goal_id();
   }
 
-  typename RclcppServer::SharedPtr server_;
-  std::string action_name_;
-  rclcpp::Logger logger_;
-  rclcpp::Clock::SharedPtr clock_;
+  const std::shared_ptr<const typename ActionT::Goal> get_pending_goal() const
+  {
+    return simple_->get_pending_goal();
+  }
 
-  // User-provided callbacks
-  GoalCallback user_handle_goal_;
-  CancelCallback user_handle_cancel_;
-  AcceptedCallback user_handle_accepted_;
+  const std::shared_ptr<const typename ActionT::Goal> accept_pending_goal()
+  {
+    return simple_->accept_pending_goal();
+  }
+
+  void terminate_pending_goal()
+  {
+    simple_->terminate_pending_goal();
+  }
+
+  void publish_feedback(typename std::shared_ptr<typename ActionT::Feedback> feedback)
+  {
+    simple_->publish_feedback(feedback);
+  }
+
+  void succeeded_current(
+    typename std::shared_ptr<typename ActionT::Result> result =
+    std::make_shared<typename ActionT::Result>())
+  {
+    simple_->succeeded_current(result);
+  }
+
+  void terminate_current(
+    typename std::shared_ptr<typename ActionT::Result> result =
+    std::make_shared<typename ActionT::Result>())
+  {
+    simple_->terminate_current(result);
+  }
+
+  void terminate_all(
+    typename std::shared_ptr<typename ActionT::Result> result =
+    std::make_shared<typename ActionT::Result>())
+  {
+    simple_->terminate_all(result);
+  }
+
+  bool is_server_active()
+  {
+    return simple_->is_server_active();
+  }
+
+  bool is_cancel_requested() const
+  {
+    return simple_->is_cancel_requested();
+  }
+
+  bool is_preempt_requested() const
+  {
+    return simple_->is_preempt_requested();
+  }
+
+  bool is_running()
+  {
+    return simple_->is_running();
+  }
+
+  /**
+   * @brief Direct access to the underlying SimpleActionServer
+   *
+   * Use when you need methods not forwarded here (e.g. setSoftRealTimePriority).
+   * Prefer the forwarded methods for common operations.
+   */
+  SimpleServer & server() { return *simple_; }
+  const SimpleServer & server() const { return *simple_; }
+
+  /**
+   * @brief Shared pointer to the underlying SimpleActionServer
+   *
+   * Useful when another component needs shared ownership.
+   */
+  std::shared_ptr<SimpleServer> get_simple_server() { return simple_; }
+  std::shared_ptr<const SimpleServer> get_simple_server() const { return simple_; }
+
+private:
+  std::shared_ptr<SimpleServer> simple_;
 };
 
 }  // namespace nav2

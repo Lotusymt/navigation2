@@ -31,7 +31,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav2_util/robot_utils.hpp"
 #include "nav2_util/twist_publisher.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_core/behavior.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -66,7 +66,7 @@ template<typename ActionT>
 class TimedBehavior : public nav2_core::Behavior
 {
 public:
-  using ActionServer = nav2::SimpleActionServer<ActionT>;
+  using ActionServer = nav2::ActionServer<ActionT>;
 
   /**
    * @brief A TimedBehavior constructor
@@ -135,7 +135,7 @@ public:
     node->get_parameter("robot_base_frame", robot_base_frame_);
     node->get_parameter("transform_tolerance", transform_tolerance_);
 
-    action_server_ = node->create_action_server<ActionT>(
+    action_server_ = node->create_managed_action_server<ActionT>(
       behavior_name_,
       std::bind(&TimedBehavior::execute, this), nullptr, std::chrono::milliseconds(
         500), false);
@@ -162,7 +162,6 @@ public:
     RCLCPP_INFO(logger_, "Activating %s", behavior_name_.c_str());
 
     vel_pub_->on_activate();
-    action_server_->activate();
     enabled_ = true;
   }
 
@@ -170,7 +169,6 @@ public:
   void deactivate() override
   {
     vel_pub_->on_deactivate();
-    action_server_->deactivate();
     enabled_ = false;
   }
 

@@ -18,7 +18,7 @@
 
 #include "tf2_ros/transform_listener.hpp"
 #include "nav2_util/robot_utils.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_msgs/action/compute_and_track_route.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav2_core/route_exceptions.hpp"
@@ -38,7 +38,7 @@ namespace nav2_route
 class RouteTracker
 {
 public:
-  using ActionServerTrack = nav2::SimpleActionServer<nav2_msgs::action::ComputeAndTrackRoute>;
+  using ActionServerTrack = nav2::ActionServer<nav2_msgs::action::ComputeAndTrackRoute>;
   using Feedback = nav2_msgs::action::ComputeAndTrackRoute::Feedback;
 
   /**

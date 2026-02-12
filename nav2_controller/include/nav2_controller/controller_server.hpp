@@ -32,7 +32,7 @@
 #include "nav2_msgs/msg/tracking_feedback.hpp"
 #include "nav2_msgs/msg/speed_limit.hpp"
 #include "nav2_ros_common/lifecycle_node.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_util/robot_utils.hpp"
 #include "nav2_util/odometry_utils.hpp"
 #include "nav2_util/twist_publisher.hpp"
@@ -114,7 +114,7 @@ protected:
   nav2::CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
 
   using Action = nav2_msgs::action::FollowPath;
-  using ActionServer = nav2::SimpleActionServer<Action>;
+  using ActionServer = nav2::ActionServer<Action>;
 
   // Our action server implements the FollowPath action
   typename ActionServer::SharedPtr action_server_;

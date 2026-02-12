@@ -149,8 +149,8 @@ bool BtActionServer<ActionT, NodeT>::on_configure()
 
   // Could be using a user rclcpp::Node, so need to use the Nav2 factory to create the subscription
   // to convert nav2::LifecycleNode, rclcpp::Node or rclcpp_lifecycle::LifecycleNode
-  action_server_ = nav2::interfaces::create_action_server<ActionT>(
-    node, action_name_, std::bind(&BtActionServer<ActionT, NodeT>::executeCallback, this),
+  action_server_ = node->template create_managed_action_server<ActionT>(
+    action_name_, std::bind(&BtActionServer<ActionT, NodeT>::executeCallback, this),
     nullptr, std::chrono::milliseconds(500), false);
 
   // Get parameters for BT timeouts
@@ -194,14 +194,12 @@ bool BtActionServer<ActionT, NodeT>::on_activate()
     RCLCPP_ERROR(logger_, "Error loading BT: %s", default_bt_xml_filename_or_id_.c_str());
     return false;
   }
-  action_server_->activate();
   return true;
 }
 
 template<class ActionT, class NodeT>
 bool BtActionServer<ActionT, NodeT>::on_deactivate()
 {
-  action_server_->deactivate();
   return true;
 }
 

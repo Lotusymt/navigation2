@@ -225,37 +225,36 @@ public:
   }
 
   /**
-   * @brief Create a lifecycle-managed ActionServer to host with an action
+   * @brief Create a lifecycle-managed ActionServer (wraps SimpleActionServer)
+   *
+   * Use this when you want activation/deactivation driven by lifecycle transitions.
+   * Do NOT manually call activate()/deactivate() in on_activate/on_deactivate.
+   *
    * @param action_name Name of action
-   * @param handle_goal Callback to handle goal requests
-   * @param handle_cancel Callback to handle cancel requests
-   * @param handle_accepted Callback to handle accepted goals
-   * @param options Action server options (default options if not provided)
-   * @param callback_group Callback group to use (optional)
+   * @param execute_callback Callback function to handle action execution
+   * @param completion_callback Callback function to handle action completion (optional)
+   * @param server_timeout Timeout for the action server (default is 500ms)
+   * @param spin_thread Whether to spin with a dedicated thread internally (default is false)
+   * @param realtime Whether the action server's worker thread should have elevated priority
    * @return A shared pointer to the created nav2::ActionServer
    */
   template<typename ActionT>
   typename nav2::ActionServer<ActionT>::SharedPtr
-  create_action_server(
+  create_managed_action_server(
     const std::string & action_name,
-    typename nav2::ActionServer<ActionT>::GoalCallback handle_goal,
-    typename nav2::ActionServer<ActionT>::CancelCallback handle_cancel,
-    typename nav2::ActionServer<ActionT>::AcceptedCallback handle_accepted,
-    const rcl_action_server_options_t & options = rcl_action_server_get_default_options(),
-    rclcpp::CallbackGroup::SharedPtr callback_group = nullptr)
+    typename nav2::SimpleActionServer<ActionT>::ExecuteCallback execute_callback,
+    typename nav2::SimpleActionServer<ActionT>::CompletionCallback compl_cb = nullptr,
+    std::chrono::milliseconds server_timeout = std::chrono::milliseconds(500),
+    bool spin_thread = false,
+    const bool realtime = false)
   {
-    auto server = nav2::interfaces::create_action_server<ActionT>(
-      shared_from_this(), action_name, handle_goal, handle_cancel, handle_accepted,
-      options, callback_group);
-    this->add_managed_entity(server);
-
-    // Automatically activate the action server if the node is already active
-    if (get_current_state().id() ==
-      lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
-    {
+    auto server = nav2::interfaces::create_managed_action_server<ActionT>(
+      shared_from_this(), action_name, execute_callback, compl_cb,
+      server_timeout, spin_thread, realtime);
+    add_managed_entity(std::weak_ptr<rclcpp_lifecycle::ManagedEntityInterface>(server));
+    if (get_current_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
       server->on_activate();
     }
-
     return server;
   }
 

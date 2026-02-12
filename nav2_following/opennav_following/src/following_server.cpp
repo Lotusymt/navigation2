@@ -85,7 +85,7 @@ FollowingServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
   odom_sub_ = std::make_unique<nav2_util::OdomSmoother>(node, odom_duration, odom_topic);
 
   // Create the action server for dynamic following
-  following_action_server_ = node->create_action_server<FollowObject>(
+  following_action_server_ = node->create_managed_action_server<FollowObject>(
     "follow_object",
     std::bind(&FollowingServer::followObject, this),
     nullptr, std::chrono::milliseconds(500),
@@ -134,7 +134,6 @@ FollowingServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   tf2_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf2_buffer_, this, true);
   vel_publisher_->on_activate();
   filtered_dynamic_pose_pub_->on_activate();
-  following_action_server_->activate();
 
   // Add callback for dynamic parameters
   dyn_params_handler_ = node->add_on_set_parameters_callback(
@@ -151,7 +150,6 @@ FollowingServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating %s", get_name());
 
-  following_action_server_->deactivate();
   vel_publisher_->on_deactivate();
   filtered_dynamic_pose_pub_->on_deactivate();
 
@@ -188,7 +186,7 @@ FollowingServer::on_shutdown(const rclcpp_lifecycle::State &)
 template<typename ActionT>
 void FollowingServer::getPreemptedGoalIfRequested(
   typename std::shared_ptr<const typename ActionT::Goal> goal,
-  const typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server)
+  const typename nav2::ActionServer<ActionT>::SharedPtr & action_server)
 {
   if (action_server->is_preempt_requested()) {
     goal = action_server->accept_pending_goal();
@@ -197,7 +195,7 @@ void FollowingServer::getPreemptedGoalIfRequested(
 
 template<typename ActionT>
 bool FollowingServer::checkAndWarnIfCancelled(
-  typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+  typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
   const std::string & name)
 {
   if (action_server->is_cancel_requested()) {
@@ -209,7 +207,7 @@ bool FollowingServer::checkAndWarnIfCancelled(
 
 template<typename ActionT>
 bool FollowingServer::checkAndWarnIfPreempted(
-  typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server,
+  typename nav2::ActionServer<ActionT>::SharedPtr & action_server,
   const std::string & name)
 {
   if (action_server->is_preempt_requested()) {

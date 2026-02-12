@@ -24,8 +24,8 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav2_behavior_tree/behavior_tree_engine.hpp"
 #include "nav2_behavior_tree/ros_topic_logger.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_ros_common/lifecycle_node.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
 
 namespace nav2_behavior_tree
 {
@@ -37,7 +37,7 @@ template<class ActionT, class NodeT>
 class BtActionServer
 {
 public:
-  using ActionServer = nav2::SimpleActionServer<ActionT>;
+  using ActionServer = nav2::ActionServer<ActionT>;
 
   typedef std::function<bool (typename ActionT::Goal::ConstSharedPtr)> OnGoalReceivedCallback;
   typedef std::function<void ()> OnLoopCallback;

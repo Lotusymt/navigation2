@@ -63,7 +63,7 @@ WaypointFollower::on_configure(const rclcpp_lifecycle::State & state)
   nav_to_pose_client_ = create_action_client<ClientT>(
     "navigate_to_pose", callback_group_);
 
-  xyz_action_server_ = create_action_server<ActionT>(
+  xyz_action_server_ = create_managed_action_server<ActionT>(
     "follow_waypoints", std::bind(
       &WaypointFollower::followWaypointsCallback,
       this), nullptr, std::chrono::milliseconds(
@@ -73,7 +73,7 @@ WaypointFollower::on_configure(const rclcpp_lifecycle::State & state)
     "/fromLL",
     true /*creates and spins an internal executor*/);
 
-  gps_action_server_ = create_action_server<ActionTGPS>(
+  gps_action_server_ = create_managed_action_server<ActionTGPS>(
     "follow_gps_waypoints",
     std::bind(
       &WaypointFollower::followGPSWaypointsCallback,
@@ -105,9 +105,6 @@ WaypointFollower::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
 
-  xyz_action_server_->activate();
-  gps_action_server_->activate();
-
   auto node = shared_from_this();
   // Add callback for dynamic parameters
   dyn_params_handler_ = node->add_on_set_parameters_callback(
@@ -124,8 +121,6 @@ WaypointFollower::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
 
-  xyz_action_server_->deactivate();
-  gps_action_server_->deactivate();
   remove_on_set_parameters_callback(dyn_params_handler_.get());
   dyn_params_handler_.reset();
   // destroy bond connection

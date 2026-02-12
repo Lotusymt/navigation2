@@ -30,7 +30,7 @@
 #include "nav2_msgs/action/compute_path_through_poses.hpp"
 #include "nav2_msgs/msg/costmap.hpp"
 #include "nav2_util/robot_utils.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_ros_common/service_server.hpp"
 #include "tf2_ros/transform_listener.hpp"
 #include "tf2_ros/create_timer_ros.hpp"
@@ -114,8 +114,8 @@ protected:
   using ActionToPoseResult = ActionToPose::Result;
   using ActionThroughPoses = nav2_msgs::action::ComputePathThroughPoses;
   using ActionThroughPosesResult = ActionThroughPoses::Result;
-  using ActionServerToPose = nav2::SimpleActionServer<ActionToPose>;
-  using ActionServerThroughPoses = nav2::SimpleActionServer<ActionThroughPoses>;
+  using ActionServerToPose = nav2::ActionServer<ActionToPose>;
+  using ActionServerThroughPoses = nav2::ActionServer<ActionThroughPoses>;
 
   /**
    * @brief Check if an action server is valid / active
@@ -123,7 +123,7 @@ protected:
    * @return SUCCESS or FAILURE
    */
   template<typename T>
-  bool isServerInactive(typename nav2::SimpleActionServer<T>::SharedPtr & action_server);
+  bool isServerInactive(typename nav2::ActionServer<T>::SharedPtr & action_server);
 
   /**
    * @brief Check if an action server has a cancellation request pending
@@ -131,7 +131,7 @@ protected:
    * @return SUCCESS or FAILURE
    */
   template<typename T>
-  bool isCancelRequested(typename nav2::SimpleActionServer<T>::SharedPtr & action_server);
+  bool isCancelRequested(typename nav2::ActionServer<T>::SharedPtr & action_server);
 
   /**
    * @brief Wait for costmap to be valid with updated sensor data or repopulate after a
@@ -147,7 +147,7 @@ protected:
    */
   template<typename T>
   void getPreemptedGoalIfRequested(
-    typename nav2::SimpleActionServer<T>::SharedPtr & action_server,
+    typename nav2::ActionServer<T>::SharedPtr & action_server,
     typename std::shared_ptr<const typename T::Goal> goal);
 
   /**

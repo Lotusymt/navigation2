@@ -25,7 +25,7 @@
 #include "nav2_ros_common/lifecycle_node.hpp"
 #include "tf2_ros/transform_listener.hpp"
 #include "tf2_ros/create_timer_ros.hpp"
-#include "nav2_ros_common/simple_action_server.hpp"
+#include "nav2_ros_common/action_server.hpp"
 #include "nav2_ros_common/node_utils.hpp"
 #include "nav2_util/robot_utils.hpp"
 #include "nav2_ros_common/service_server.hpp"
@@ -58,13 +58,13 @@ public:
   using ComputeRoute = nav2_msgs::action::ComputeRoute;
   using ComputeRouteGoal = ComputeRoute::Goal;
   using ComputeRouteResult = ComputeRoute::Result;
-  using ComputeRouteServer = nav2::SimpleActionServer<ComputeRoute>;
+  using ComputeRouteServer = nav2::ActionServer<ComputeRoute>;
 
   using ComputeAndTrackRoute = nav2_msgs::action::ComputeAndTrackRoute;
   using ComputeAndTrackRouteGoal = ComputeAndTrackRoute::Goal;
   using ComputeAndTrackRouteFeedback = ComputeAndTrackRoute::Feedback;
   using ComputeAndTrackRouteResult = ComputeAndTrackRoute::Result;
-  using ComputeAndTrackRouteServer = nav2::SimpleActionServer<ComputeAndTrackRoute>;
+  using ComputeAndTrackRouteServer = nav2::ActionServer<ComputeAndTrackRoute>;
 
   /**
    * @brief A constructor for nav2_route::RouteServer
@@ -146,7 +146,7 @@ protected:
    */
   template<typename ActionT>
   void processRouteRequest(
-    typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server);
+    typename nav2::ActionServer<ActionT>::SharedPtr & action_server);
 
   /**
    * @brief Find the planning duration of the request and log warnings
@@ -161,7 +161,7 @@ protected:
    * @return if the request is valid
    */
   template<typename ActionT>
-  bool isRequestValid(typename nav2::SimpleActionServer<ActionT>::SharedPtr & action_server);
+  bool isRequestValid(typename nav2::ActionServer<ActionT>::SharedPtr & action_server);
 
   /**
    * @brief Populate result for compute route action
